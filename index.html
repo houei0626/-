@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>せんじがら管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --surface2: #f2f2f4;
+  --border: #e8e8ec;
+  --text: #0f0f10;
+  --text2: #6b6b78;
+  --text3: #a0a0ac;
+  --accent: #1a1a2e;
+  --green: #0a7c59;
+  --green-bg: #e8f5f0;
+  --red: #c0392b;
+  --red-bg: #fdf0ef;
+  --amber: #b45309;
+  --amber-bg: #fef3e2;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.10);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Noto Sans JP', 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: 80px;
+}
+
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar-title { font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; }
+.topbar-date { font-size: 0.72rem; color: var(--text3); }
+
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  display: flex; height: 64px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 0.6rem; font-family: inherit; font-weight: 500;
+  letter-spacing: 0.04em; transition: color 0.18s; padding: 0;
+}
+.nav-item .icon { font-size: 1.3rem; line-height: 1; }
+.nav-item.active { color: var(--accent); }
+.nav-dot { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; margin-top: 2px; }
+
+.page { display: none; padding: 16px; animation: fadeUp 0.22s ease; }
+.page.active { display: block; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; } }
+
+.alert-banner {
+  display: none; background: var(--red-bg); border: 1px solid #f5c6c2;
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px;
+  font-size: 0.8rem; line-height: 1.7; color: var(--red);
+}
+.alert-banner.show { display: block; }
+
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 12px; }
+.card-header { padding: 16px 16px 0; display: flex; align-items: center; justify-content: space-between; }
+.card-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); }
+
+.summary-card { background: var(--accent); color: white; border-radius: var(--radius); padding: 20px; margin-bottom: 12px; }
+.summary-label { font-size: 0.7rem; font-weight: 500; opacity: 0.6; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+.summary-month { font-size: 0.85rem; opacity: 0.7; margin-bottom: 8px; }
+.summary-amount { font-family: 'DM Sans', sans-serif; font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; }
+.summary-sub { font-size: 0.72rem; opacity: 0.5; margin-top: 4px; }
+
+.stock-list { padding: 8px 0; }
+.stock-item {
+  display: flex; align-items: center; padding: 12px 16px; gap: 12px;
+  border-bottom: 1px solid var(--border); transition: background 0.15s;
+}
+.stock-item:last-child { border-bottom: none; }
+.stock-item:active { background: var(--surface2); }
+.stock-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.stock-info { flex: 1; min-width: 0; }
+.stock-name { font-size: 0.9rem; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.threshold-edit { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+.threshold-edit input { width: 42px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 4px; font-size: 0.7rem; text-align: center; background: var(--bg); color: var(--text); }
+
+.stock-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.04em; flex-shrink: 0; }
+.badge-ok { background: var(--green-bg); color: var(--green); }
+.badge-warn { background: var(--amber-bg); color: var(--amber); }
+.badge-alert { background: var(--red-bg); color: var(--red); }
+
+.qty-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.qty-num { font-family: 'DM Sans', sans-serif; font-size: 1.1rem; font-weight: 600; min-width: 36px; text-align: center; cursor: pointer; border-radius: 6px; transition: background 0.15s; padding: 2px 4px; }
+.qty-num:active { background: var(--surface2); }
+.qty-num.low { color: var(--red); }
+.updated-at { font-size: 0.62rem; color: var(--text3); margin-top: 3px; letter-spacing: 0.02em; }
+.qty-btn {
+  width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--surface2); color: var(--text); font-size: 1rem; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.qty-btn:active { background: var(--accent); color: white; border-color: var(--accent); transform: scale(0.92); }
+
+.month-nav { display: flex; align-items: center; padding: 14px 16px 10px; gap: 12px; }
+.month-title { flex: 1; font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; }
+.mnav-btn {
+  width: 32px; height: 32px; background: var(--surface2); border: none; border-radius: 8px;
+  cursor: pointer; font-size: 1rem; color: var(--text2); display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.mnav-btn:active { background: var(--accent); color: white; transform: scale(0.92); }
+
+.cal-dow-row { display: grid; grid-template-columns: repeat(7,1fr); padding: 0 10px; margin-bottom: 4px; }
+.cal-dow { text-align: center; font-size: 0.65rem; font-weight: 700; color: var(--text3); padding: 4px 0; letter-spacing: 0.06em; }
+.cal-dow:first-child { color: #e05757; }
+.cal-dow:last-child { color: #5b87d6; }
+
+.cal-body { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; padding: 0 10px 14px; }
+.cal-cell {
+  aspect-ratio: 1; border-radius: 9px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; cursor: pointer; transition: background 0.14s; padding: 2px;
+}
+.cal-cell:active { background: var(--surface2); }
+.cal-cell.empty { pointer-events: none; }
+.cal-cell.today { background: var(--accent); }
+.cal-cell.today .cal-date { color: white; }
+.cal-cell.today .cal-sales { color: rgba(255,255,255,0.75); }
+.cal-cell.has-sales { background: var(--green-bg); }
+.cal-date { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; color: var(--text); line-height: 1; }
+.cal-cell.sunday .cal-date { color: #e05757; }
+.cal-cell.saturday .cal-date { color: #5b87d6; }
+.cal-cell.today .cal-date { color: white; }
+.cal-cell.has-sales .cal-date { color: var(--green); }
+.cal-sales { font-size: 0.48rem; color: var(--green); font-weight: 700; margin-top: 1px; white-space: nowrap; }
+.cal-cell.today .cal-sales { color: rgba(255,255,255,0.8); }
+
+.month-footer {
+  border-top: 1px solid var(--border); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.month-footer-label { font-size: 0.75rem; color: var(--text2); font-weight: 500; }
+.month-footer-total { font-family: 'DM Sans', sans-serif; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; }
+
+.chart-area { padding: 16px 16px 8px; }
+.bar-wrap { display: flex; align-items: flex-end; gap: 5px; height: 130px; border-bottom: 1px solid var(--border); margin-bottom: 8px; padding: 0 2px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.bar-fill { width: 100%; background: var(--surface2); border-radius: 4px 4px 0 0; transition: height 0.4s cubic-bezier(.34,1.56,.64,1); min-height: 2px; }
+.bar-fill.has-data { background: var(--accent); opacity: 0.6; }
+.bar-fill.is-current { background: var(--accent); opacity: 1; }
+.bar-label { font-size: 0.58rem; color: var(--text3); text-align: center; font-weight: 500; }
+.bar-col.current .bar-label { color: var(--accent); font-weight: 700; }
+.chart-tip { font-size: 0.7rem; color: var(--text3); padding: 0 2px 12px; }
+
+.year-card { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
+.year-label { font-size: 0.75rem; color: var(--text2); font-weight: 500; }
+.year-total { font-family: 'DM Sans', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.4);
+  display: none; align-items: flex-end; justify-content: center;
+}
+.overlay.open { display: flex; }
+.sheet {
+  background: white; border-radius: 20px 20px 0 0; padding: 12px 20px 36px;
+  width: 100%; max-width: 480px; box-shadow: var(--shadow-md);
+  animation: slideUp 0.22s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.sheet-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; text-align: center; }
+.sheet-input {
+  width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px 16px; font-size: 1.2rem; font-family: 'DM Sans','Noto Sans JP',sans-serif;
+  color: var(--text); text-align: center; margin-bottom: 14px; transition: border-color 0.2s;
+}
+.sheet-input:focus { outline: none; border-color: var(--accent); background: white; }
+.sheet-actions { display: flex; gap: 10px; }
+.btn-save { flex: 1; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); padding: 14px; font-size: 0.9rem; font-family: inherit; font-weight: 700; cursor: pointer; letter-spacing: 0.06em; transition: opacity 0.15s; }
+.btn-save:active { opacity: 0.8; }
+.btn-clear { background: var(--red-bg); color: var(--red); border: none; border-radius: var(--radius-sm); padding: 14px 16px; font-size: 0.85rem; font-family: inherit; font-weight: 600; cursor: pointer; }
+.btn-cancel { background: var(--surface2); color: var(--text2); border: none; border-radius: var(--radius-sm); padding: 14px 16px; font-size: 0.85rem; font-family: inherit; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">せんじがら管理</div>
+  <div class="topbar-date" id="topDate"></div>
+</div>
+
+<div style="padding:12px 16px 0">
+  <div class="alert-banner" id="alertBanner"></div>
+</div>
+
+<!-- 在庫 -->
+<div class="page active" id="page-stock">
+  <div class="card" style="margin-top:4px">
+    <div class="card-header"><div class="card-label">在庫状況</div></div>
+    <div class="stock-list" id="stockList"></div>
+  </div>
+  <p style="font-size:0.72rem;color:var(--text3);padding:2px 4px;line-height:1.8;">品名をタップで編集 ／ 不足値を下回ると⚠️アラート</p>
+</div>
+
+<!-- 売上 -->
+<div class="page" id="page-sales">
+  <div class="summary-card">
+    <div class="summary-label">月間合計売上</div>
+    <div class="summary-month" id="summaryMonth"></div>
+    <div class="summary-amount" id="summaryAmount">¥0</div>
+    <div class="summary-sub">日付をタップして売上を入力</div>
+  </div>
+  <div class="card">
+    <div class="month-nav">
+      <button class="mnav-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="month-title" id="monthTitle"></div>
+      <button class="mnav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-dow-row">
+      <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
+      <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow">土</div>
+    </div>
+    <div class="cal-body" id="calBody"></div>
+    <div class="month-footer">
+      <span class="month-footer-label">月間合計</span>
+      <span class="month-footer-total" id="monthFooterTotal">¥0</span>
+    </div>
+  </div>
+</div>
+
+<!-- グラフ -->
+<div class="page" id="page-chart">
+  <div class="card" style="margin-top:4px">
+    <div class="card-header" style="padding-bottom:12px"><div class="card-label">月別売上（直近12ヶ月）</div></div>
+    <div class="chart-area">
+      <div class="bar-wrap" id="barChart"></div>
+      <div class="chart-tip">バーをタップで金額を確認</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="year-card">
+      <span class="year-label" id="yearLabel">今年の合計</span>
+      <span class="year-total" id="yearTotal">¥0</span>
+    </div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('stock',this)">
+    <span class="icon">📦</span><span>在庫</span><span class="nav-dot"></span>
+  </button>
+  <button class="nav-item" onclick="showPage('sales',this)">
+    <span class="icon">📅</span><span>売上</span>
+  </button>
+  <button class="nav-item" onclick="showPage('chart',this)">
+    <span class="icon">📊</span><span>グラフ</span>
+  </button>
+</nav>
+
+<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetTitle"></div>
+    <input type="number" class="sheet-input" id="sheetInput" placeholder="例: 25000" min="0" inputmode="numeric">
+    <div class="sheet-actions">
+      <button class="btn-save" onclick="saveSales()">保存</button>
+      <button class="btn-clear" onclick="clearSales()">削除</button>
+      <button class="btn-cancel" onclick="closeSheet()">戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- 在庫数量 直接入力シート -->
+<div class="overlay" id="qtyOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title"><span id="qtySheetName"></span> の在庫数</div>
+    <input type="number" class="sheet-input" id="qtySheetInput" placeholder="個数を入力" min="0" inputmode="numeric">
+    <div class="sheet-actions">
+      <button class="btn-save" onclick="saveQty()">保存</button>
+      <button class="btn-cancel" onclick="closeQtySheet()">戻る</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbyGeqdfz6ZXQLRulEyyznsc1uTF-DmcJoiBgJnSxZG6GSp67C0WoVPGfAthvBV0I59p/exec';
+const COLORS=['#4f86c6','#50b892','#e07b54','#9b6bb5','#d4a843'];
+const DEFAULT_STOCK=['豚','牛','サガリ','鶏皮','砂肝'].map((name,i)=>({name,qty:0,threshold:10,color:COLORS[i]}));
+
+let stock=[...DEFAULT_STOCK];
+let sales={};
+let curYear=new Date().getFullYear(), curMonth=new Date().getMonth(), editDay=null;
+
+function showSyncStatus(msg,isError=false){
+  let el=document.getElementById('syncStatus');
+  if(!el){el=document.createElement('div');el.id='syncStatus';
+    el.style.cssText='position:fixed;top:56px;left:0;right:0;z-index:99;text-align:center;font-size:0.72rem;padding:4px 8px;transition:opacity 0.5s;';
+    document.body.appendChild(el);}
+  el.textContent=msg;
+  el.style.background=isError?'#fdf0ef':'#e8f5f0';
+  el.style.color=isError?'#c0392b':'#0a7c59';
+  el.style.opacity='1';
+  if(!isError)setTimeout(()=>el.style.opacity='0',2000);
+}
+
+async function loadFromSheet(){
+  showSyncStatus('読み込み中…');
+  try{
+    const res=await fetch(GAS_URL+'?action=getAll');
+    const data=await res.json();
+    if(data.stock&&data.stock.length>0){
+      stock=data.stock.map((row,i)=>({
+        name:row[0]||DEFAULT_STOCK[i]?.name||'商品'+(i+1),
+        qty:Number(row[1])||0,
+        threshold:Number(row[2])||10,
+        color:row[3]||COLORS[i%COLORS.length],
+        updatedAt:row[4]||null
+      }));
+    }
+    if(data.sales&&data.sales.length>0){
+      sales={};
+      data.sales.forEach(row=>{if(row[0])sales[row[0]]=Number(row[1])||0;});
+    }
+    showSyncStatus('✓ 読み込み完了');
+    renderStock();renderCalendar();
+  }catch(e){showSyncStatus('通信エラー。再読み込みしてください',true);}
+}
+
+async function saveStock(){
+  const rows=stock.map(s=>[s.name,s.qty,s.threshold,s.color,s.updatedAt||'']);
+  try{
+    await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveStock',stock:rows})});
+    showSyncStatus('✓ 在庫を保存しました');
+  }catch(e){showSyncStatus('保存に失敗しました',true);}
+}
+
+async function saveSalesData(){
+  const rows=Object.entries(sales).map(([k,v])=>[k,v]);
+  try{
+    await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSales',sales:rows})});
+    showSyncStatus('✓ 売上を保存しました');
+  }catch(e){showSyncStatus('保存に失敗しました',true);}
+}
+function sKey(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>{ b.classList.remove('active'); const d=b.querySelector('.nav-dot'); if(d)d.remove(); });
+  btn.classList.add('active');
+  const dot=document.createElement('span'); dot.className='nav-dot'; btn.appendChild(dot);
+  if(name==='chart') renderChart();
+  if(name==='sales') renderCalendar();
+}
+
+function refreshAlert(){
+  const lows=stock.filter(s=>s.qty<=s.threshold);
+  const b=document.getElementById('alertBanner');
+  if(!lows.length){ b.classList.remove('show'); return; }
+  b.classList.add('show');
+  b.innerHTML='⚠️ <strong>在庫不足：</strong>'+lows.map(s=>`「${s.name}」残り${s.qty}個`).join('、');
+}
+
+function fmtDate(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  const mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  const hh=String(d.getHours()).padStart(2,'0'), mn=String(d.getMinutes()).padStart(2,'0');
+  return `${mm}/${dd} ${hh}:${mn}`;
+}
+
+function renderStock(){
+  const list=document.getElementById('stockList');
+  list.innerHTML='';
+  stock.forEach((item,i)=>{
+    const isAlert=item.qty<=item.threshold, isWarn=!isAlert&&item.qty<=item.threshold*1.5;
+    const row=document.createElement('div'); row.className='stock-item';
+    row.innerHTML=`
+      <div class="stock-color-dot" style="background:${item.color}"></div>
+      <div class="stock-info">
+        <div class="stock-name" onclick="editName(${i})">${item.name}</div>
+        <div class="threshold-edit">不足値: <input type="number" value="${item.threshold}" min="0" onchange="setThreshold(${i},this.value)">個</div>
+        ${item.updatedAt ? `<div class="updated-at">更新: ${fmtDate(item.updatedAt)}</div>` : ''}
+      </div>
+      <span class="stock-badge ${isAlert?'badge-alert':isWarn?'badge-warn':'badge-ok'}">${isAlert?'要補充':isWarn?'残少':'OK'}</span>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
+        <div class="qty-num ${isAlert?'low':''}" onclick="openQtySheet(${i})" title="タップで直接入力">${item.qty}</div>
+        <button class="qty-btn" onclick="changeQty(${i},1)">＋</button>
+      </div>`;
+    list.appendChild(row);
+  });
+  refreshAlert();
+}
+
+function changeQty(i,d){
+  stock[i].qty=Math.max(0,stock[i].qty+d);
+  stock[i].updatedAt=new Date().toISOString();
+  saveStock(); renderStock();
+}
+function setThreshold(i,v){ stock[i].threshold=Math.max(0,parseInt(v)||0); saveStock(); renderStock(); }
+function editName(i){ const n=prompt('品名:',stock[i].name); if(n?.trim()){ stock[i].name=n.trim(); saveStock(); renderStock(); } }
+
+// 数量直接入力シート
+let editQtyIdx=null;
+function openQtySheet(i){
+  editQtyIdx=i;
+  document.getElementById('qtySheetName').textContent=stock[i].name;
+  document.getElementById('qtySheetInput').value=stock[i].qty;
+  document.getElementById('qtyOverlay').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('qtySheetInput'); el.focus(); el.select(); },80);
+}
+function closeQtySheet(){ document.getElementById('qtyOverlay').classList.remove('open'); editQtyIdx=null; }
+function saveQty(){
+  const v=parseInt(document.getElementById('qtySheetInput').value);
+  if(!isNaN(v)&&v>=0){
+    stock[editQtyIdx].qty=v;
+    stock[editQtyIdx].updatedAt=new Date().toISOString();
+    saveStock(); renderStock();
+  }
+  closeQtySheet();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('qtySheetInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveQty(); if(e.key==='Escape') closeQtySheet(); });
+  document.getElementById('qtyOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeQtySheet(); });
+});
+
+function renderCalendar(){
+  const today=new Date();
+  document.getElementById('monthTitle').textContent=`${curYear}年 ${curMonth+1}月`;
+  document.getElementById('summaryMonth').textContent=`${curYear}年 ${curMonth+1}月`;
+  const body=document.getElementById('calBody'); body.innerHTML='';
+  const firstDow=new Date(curYear,curMonth,1).getDay();
+  for(let i=0;i<firstDow;i++){ const e=document.createElement('div'); e.className='cal-cell empty'; body.appendChild(e); }
+  const days=new Date(curYear,curMonth+1,0).getDate();
+  let total=0;
+  for(let d=1;d<=days;d++){
+    const key=sKey(curYear,curMonth,d), val=sales[key];
+    if(val) total+=val;
+    const dow=new Date(curYear,curMonth,d).getDay();
+    const isToday=today.getFullYear()===curYear&&today.getMonth()===curMonth&&today.getDate()===d;
+    const cell=document.createElement('div');
+    cell.className=`cal-cell${isToday?' today':val&&!isToday?' has-sales':''}${dow===0?' sunday':dow===6?' saturday':''}`;
+    cell.onclick=()=>openSheet(curYear,curMonth,d);
+    cell.innerHTML=`<div class="cal-date">${d}</div>${val?`<div class="cal-sales">¥${Math.round(val/1000)}k</div>`:''}`;
+    body.appendChild(cell);
+  }
+  const fmt=v=>'¥'+v.toLocaleString();
+  document.getElementById('monthFooterTotal').textContent=fmt(total);
+  document.getElementById('summaryAmount').textContent=fmt(total);
+}
+
+function changeMonth(d){ curMonth+=d; if(curMonth<0){curMonth=11;curYear--;} if(curMonth>11){curMonth=0;curYear++;} renderCalendar(); }
+
+function openSheet(y,m,d){
+  editDay={y,m,d};
+  document.getElementById('sheetTitle').textContent=`${y}年${m+1}月${d}日の売上`;
+  document.getElementById('sheetInput').value=sales[sKey(y,m,d)]||'';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('sheetInput').focus(),80);
+}
+function closeSheet(){ document.getElementById('overlay').classList.remove('open'); editDay=null; }
+function handleOverlayClick(e){ if(e.target===e.currentTarget) closeSheet(); }
+function saveSales(){
+  const {y,m,d}=editDay, k=sKey(y,m,d), v=parseInt(document.getElementById('sheetInput').value);
+  if(!isNaN(v)&&v>=0) sales[k]=v; else delete sales[k];
+  saveSalesData(); closeSheet(); renderCalendar();
+}
+function clearSales(){ delete sales[sKey(editDay.y,editDay.m,editDay.d)]; saveSalesData(); closeSheet(); renderCalendar(); }
+document.getElementById('sheetInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveSales(); if(e.key==='Escape') closeSheet(); });
+
+function renderChart(){
+  const now=new Date();
+  const months=Array.from({length:12},(_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-11+i,1); return {y:d.getFullYear(),m:d.getMonth()}; });
+  const totals=months.map(({y,m})=>{ const days=new Date(y,m+1,0).getDate(); let s=0; for(let d=1;d<=days;d++){const k=sKey(y,m,d);if(sales[k])s+=sales[k];} return s; });
+  const max=Math.max(...totals,1);
+  const chart=document.getElementById('barChart'); chart.innerHTML='';
+  months.forEach(({y,m},i)=>{
+    const isCur=y===now.getFullYear()&&m===now.getMonth();
+    const col=document.createElement('div'); col.className='bar-col'+(isCur?' current':'');
+    const h=Math.max((totals[i]/max)*110,totals[i]?4:2);
+    col.innerHTML=`<div class="bar-fill${totals[i]?' has-data':''}${isCur?' is-current':''}" style="height:${h}px" onclick="alert('${y}年${m+1}月\\n¥${totals[i].toLocaleString()}')"></div><div class="bar-label">${m+1}月</div>`;
+    chart.appendChild(col);
+  });
+  const ySum=Object.keys(sales).filter(k=>k.startsWith(now.getFullYear()+'-')).reduce((a,k)=>a+sales[k],0);
+  document.getElementById('yearLabel').textContent=`${now.getFullYear()}年 合計`;
+  document.getElementById('yearTotal').textContent='¥'+ySum.toLocaleString();
+}
+
+const now=new Date();
+document.getElementById('topDate').textContent=`${now.getMonth()+1}/${now.getDate()}（${'日月火水木金土'[now.getDay()]}）`;
+loadFromSheet();
+</script>
+</body>
+</html>
