@@ -718,7 +718,16 @@ async function loadAll(){
     // 店舗設定
     if(data.shop_settings&&data.shop_settings.length>0){
       shopSettings={};
-      data.shop_settings.forEach(r=>{ if(r[0])shopSettings[r[0]]={goal:Number(r[1])||0,fixed:Number(r[2])||0,variable:Number(r[3])||0}; });
+      data.shop_settings.forEach(r=>{
+        if(r[0]){
+          // キーをYYYY-MM形式に正規化（日付オブジェクトになっている場合も対応）
+          const rawKey=String(r[0]);
+          const mKey=rawKey.substring(0,7); // 最初の7文字 = YYYY-MM
+          if(mKey.match(/^\d{4}-\d{2}$/)){
+            shopSettings[mKey]={goal:Number(r[1])||0,fixed:Number(r[2])||0,variable:Number(r[3])||0};
+          }
+        }
+      });
     }
     showSync('✓ 読み込み完了');
     renderAll();
@@ -1170,7 +1179,11 @@ async function saveShopSettings(){
   };
   renderShopSummary();
   const rows=Object.entries(shopSettings).map(([k,v])=>[k,v.goal||0,v.fixed||0,v.variable||0]);
-  try{ await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveShopSettings',settings:rows})}); showSync('✓ 設定を保存しました'); }
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveShopSettings',settings:rows})});
+    showSync('✓ 設定を保存しました');
+    renderShopSummary();
+  }
   catch(e){ showSync('保存に失敗しました',true); }
 }
 
