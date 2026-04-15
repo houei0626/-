@@ -199,9 +199,9 @@ align-items: center; justify-content: center; cursor: pointer; transition: backg
 }
 .cal-cell:active { background: #f2f0eb; }
 .cal-cell.empty { pointer-events: none; }
-.cal-cell.today { background: #2c1810; }
-.cal-cell.today .cal-date { color: white; }
-.cal-cell.today .cal-sales { color: rgba(255,255,255,0.8); }
+.cal-cell.today { background: #c49a3c; box-shadow: 0 2px 8px rgba(196,154,60,0.5); }
+.cal-cell.today .cal-date { color: white; font-weight: 900; }
+.cal-cell.today .cal-sales { color: rgba(255,255,255,0.9); }
 .cal-cell.has-sales { background: #fdf5ef; }
 .cal-cell.has-sales .cal-date { color: #8b4513; }
 .cal-date { font-family: ‘DM Sans’, sans-serif; font-size: 0.78rem; font-weight: 600; color: #1c1810; line-height: 1; }
@@ -226,7 +226,7 @@ cursor: pointer; transition: background 0.14s; padding: 2px;
 }
 .shop-cal-cell.has-sales { background: #eef4fa; }
 .shop-cal-cell.has-sales .cal-date { color: #1a4a6e; }
-.shop-cal-cell.today { background: #1a4a6e; }
+.shop-cal-cell.today { background: #c49a3c; box-shadow: 0 2px 8px rgba(196,154,60,0.5); }
 .shop-cal-cell.today .cal-date { color: white; }
 .shop-cal-cell.today .shop-sales-text { color: rgba(255,255,255,0.8); }
 .shop-sales-text { font-size: 0.42rem; color: #1a4a6e; font-weight: 700; margin-top: 1px; white-space: nowrap; line-height: 1.3; }
@@ -271,7 +271,7 @@ transition: border-color 0.2s;
 .setting-unit { font-size: 0.75rem; color: #a09888; }
 .btn-setting-save {
 margin: 12px 16px; width: calc(100% - 32px);
-background: #1a4a6e; color: white; border: none; border-radius: 10px;
+background: #c49a3c; color: white; border: none; border-radius: 10px;
 padding: 12px; font-size: 0.88rem; font-family: inherit; font-weight: 700;
 cursor: pointer; letter-spacing: 0.06em; transition: opacity 0.15s;
 }
@@ -839,9 +839,23 @@ function renderSjCalendar(){
     const dow=new Date(sjYear,sjMonth,d).getDay();
     const isToday=today.getFullYear()===sjYear&&today.getMonth()===sjMonth&&today.getDate()===d;
     const cell=document.createElement('div');
-    cell.className=`cal-cell${isToday?' today':val&&!isToday?' has-sales':''}${dow===0?' sunday':dow===6?' saturday':''}`;
+    let cls='cal-cell';
+    if(isToday) cls+=' today';
+    else if(val) cls+=' has-sales';
+    if(dow===0) cls+=' sunday';
+    else if(dow===6) cls+=' saturday';
+    cell.className=cls;
     cell.onclick=()=>openSjSheet(sjYear,sjMonth,d);
-    cell.innerHTML=`<div class="cal-date">${d}</div>${val?`<div class="cal-sales">¥${Math.round(val/1000)}k</div>`:''}`;
+    const dateDiv=document.createElement('div');
+    dateDiv.className='cal-date';
+    dateDiv.textContent=d;
+    cell.appendChild(dateDiv);
+    if(val){
+      const salesDiv=document.createElement('div');
+      salesDiv.className='cal-sales';
+      salesDiv.textContent='¥'+Math.round(val/1000)+'k';
+      cell.appendChild(salesDiv);
+    }
     body.appendChild(cell);
   }
   const fmt=v=>'¥'+v.toLocaleString();
@@ -889,9 +903,23 @@ function renderShopCalendar(){
     const dow=new Date(shopYear,shopMonth,d).getDay();
     const isToday=today.getFullYear()===shopYear&&today.getMonth()===shopMonth&&today.getDate()===d;
     const cell=document.createElement('div');
-    cell.className=`cal-cell shop-cal-cell${isToday?' today':total>0&&!isToday?' has-sales':''}${dow===0?' sunday':dow===6?' saturday':''}`;
+    let shopCls='cal-cell shop-cal-cell';
+    if(isToday) shopCls+=' today';
+    else if(total>0) shopCls+=' has-sales';
+    if(dow===0) shopCls+=' sunday';
+    else if(dow===6) shopCls+=' saturday';
+    cell.className=shopCls;
     cell.onclick=()=>openShopSheet(shopYear,shopMonth,d);
-    cell.innerHTML=`<div class="cal-date">${d}</div>${total>0?`<div class="shop-sales-text">${lunch>0?'L¥'+Math.round(lunch/1000)+'k':''}<br>${dinner>0?'D¥'+Math.round(dinner/1000)+'k':''}</div>`:''}`;
+    const sdateDiv=document.createElement('div');
+    sdateDiv.className='cal-date';
+    sdateDiv.textContent=d;
+    cell.appendChild(sdateDiv);
+    if(total>0){
+      const ssalesDiv=document.createElement('div');
+      ssalesDiv.className='shop-sales-text';
+      if(lunch>0) ssalesDiv.innerHTML=(lunch>0?'L¥'+Math.round(lunch/1000)+'k':'')+'<br>'+(dinner>0?'D¥'+Math.round(dinner/1000)+'k':'');
+      cell.appendChild(ssalesDiv);
+    }
     body.appendChild(cell);
   }
   const fmt=v=>'¥'+v.toLocaleString();
@@ -985,14 +1013,42 @@ function renderYearlyChart(){
   months.forEach(({y,m},i)=>{
     const isCur=y===now.getFullYear()&&m===now.getMonth();
     const col=document.createElement('div');
-    col.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px;';
+    col.style.flex='1';
+    col.style.display='flex';
+    col.style.flexDirection='column';
+    col.style.alignItems='center';
+    col.style.justifyContent='flex-end';
+    col.style.height='100%';
+    col.style.gap='2px';
     const sjH=Math.max((sjTotals[i]/maxVal)*130,sjTotals[i]>0?3:1);
     const shH=Math.max((shopTotals[i]/maxVal)*130,shopTotals[i]>0?3:1);
-    col.innerHTML=`
-      <div style="width:100%;display:flex;gap:1px;align-items:flex-end;justify-content:center;height:130px;">
-        <div style="flex:1;height:${sjH}px;background:#8b4513;border-radius:3px 3px 0 0;opacity:${isCur?1:0.65};" title="${y}年${m+1}月 せんじがら ¥${sjTotals[i].toLocaleString()}"></div>
-        <div style="flex:1;height:${shH}px;background:#1a4a6e;border-radius:3px 3px 0 0;opacity:${isCur?1:0.65};" title="${y}年${m+1}月 店舗 ¥${shopTotals[i].toLocaleString()}"></div>
-      </div>`;
+    // バーコンテナ
+    const barWrap=document.createElement('div');
+    barWrap.style.width='100%';
+    barWrap.style.display='flex';
+    barWrap.style.gap='1px';
+    barWrap.style.alignItems='flex-end';
+    barWrap.style.justifyContent='center';
+    barWrap.style.height='130px';
+    // せんじがらバー
+    const sjBar=document.createElement('div');
+    sjBar.style.flex='1';
+    sjBar.style.height=sjH+'px';
+    sjBar.style.backgroundColor='#8b4513';
+    sjBar.style.borderRadius='3px 3px 0 0';
+    sjBar.style.opacity=isCur?'1':'0.65';
+    sjBar.title=y+'年'+(m+1)+'月 せんじがら ¥'+sjTotals[i].toLocaleString();
+    // 店舗バー
+    const shBar=document.createElement('div');
+    shBar.style.flex='1';
+    shBar.style.height=shH+'px';
+    shBar.style.backgroundColor='#1a4a6e';
+    shBar.style.borderRadius='3px 3px 0 0';
+    shBar.style.opacity=isCur?'1':'0.65';
+    shBar.title=y+'年'+(m+1)+'月 店舗 ¥'+shopTotals[i].toLocaleString();
+    barWrap.appendChild(sjBar);
+    barWrap.appendChild(shBar);
+    col.appendChild(barWrap);
     chart.appendChild(col);
     const lbl=document.createElement('div');
     lbl.style.cssText='text-align:center;font-size:0.55rem;color:'+(isCur?'#c49a3c':' #a09888')+';font-weight:'+(isCur?'700':'400')+';';
