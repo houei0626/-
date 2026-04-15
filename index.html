@@ -705,27 +705,43 @@ async function loadAll(){
         color:row[3]||COLORS[i%5], updatedAt:row[4]||null
       }));
     }
+    // キー正規化ヘルパー（Googleスプレッドシートが日付を変換することがある）
+    function normalizeKey(raw){
+      const s=String(raw).replace(/^'/,''); // シングルクォートを除去
+      // YYYY-MM-DD形式
+      if(s.match(/^\d{4}-\d{2}-\d{2}/)) return s.substring(0,10);
+      // YYYY-MM形式
+      if(s.match(/^\d{4}-\d{2}$/)) return s;
+      // Date型が文字列化された場合（Thu Apr 01 2026...）
+      const d=new Date(s);
+      if(!isNaN(d.getTime())){
+        const y=d.getFullYear();
+        const m=String(d.getMonth()+1).padStart(2,'0');
+        const day=String(d.getDate()).padStart(2,'0');
+        // YYYY-MM-DDが必要かYYYY-MMが必要かは文字数で判定
+        if(s.length<=7) return y+'-'+m;
+        return y+'-'+m+'-'+day;
+      }
+      return s;
+    }
     // せんじがら売上
     if(data.sj_sales&&data.sj_sales.length>0){
       sjSales={};
-      data.sj_sales.forEach(r=>{ if(r[0])sjSales[r[0]]=Number(r[1])||0; });
+      data.sj_sales.forEach(r=>{ if(r[0]){ const k=normalizeKey(r[0]); if(k) sjSales[k]=Number(r[1])||0; } });
     }
     // 店舗売上
     if(data.shop_sales&&data.shop_sales.length>0){
       shopSales={};
-      data.shop_sales.forEach(r=>{ if(r[0])shopSales[r[0]]={lunch:Number(r[1])||0,dinner:Number(r[2])||0}; });
+      data.shop_sales.forEach(r=>{ if(r[0]){ const k=normalizeKey(r[0]); if(k) shopSales[k]={lunch:Number(r[1])||0,dinner:Number(r[2])||0}; } });
     }
     // 店舗設定
     if(data.shop_settings&&data.shop_settings.length>0){
       shopSettings={};
       data.shop_settings.forEach(r=>{
         if(r[0]){
-          // キーをYYYY-MM形式に正規化（日付オブジェクトになっている場合も対応）
           const rawKey=String(r[0]);
-          const mKey=rawKey.substring(0,7); // 最初の7文字 = YYYY-MM
-          if(mKey.match(/^\d{4}-\d{2}$/)){
-            shopSettings[mKey]={goal:Number(r[1])||0,fixed:Number(r[2])||0,variable:Number(r[3])||0};
-          }
+          const mKey=rawKey.substring(0,7);
+          if(mKey.length===7) shopSettings[mKey]={goal:Number(r[1])||0,fixed:Number(r[2])||0,variable:Number(r[3])||0};
         }
       });
     }
@@ -882,13 +898,13 @@ async function saveSjSales(){
   if(!isNaN(v)&&v>=0)sjSales[k]=v; else delete sjSales[k];
   closeSjSheet(); renderSjCalendar();
   // 自動的にせんじがら売上ページに留まる（シートが閉じる）
-  const rows=Object.entries(sjSales).map(([k,v])=>[k,v]);
+  const rows=Object.entries(sjSales).map(([k,v])=>["'"+k,v]);
   try{ await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSjSales',sales:rows})}); showSync('✓ 売上を保存しました'); }
   catch(e){ showSync('保存に失敗しました',true); }
 }
 function clearSjSales(){ const {y,m,d}=sjEditDay; delete sjSales[sjKey(y,m,d)]; closeSjSheet(); renderSjCalendar(); saveSjSalesData(); }
 async function saveSjSalesData(){
-  const rows=Object.entries(sjSales).map(([k,v])=>[k,v]);
+  const rows=Object.entries(sjSales).map(([k,v])=>["'"+k,v]);
   try{ await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSjSales',sales:rows})}); }catch(e){}
 }
 document.getElementById('sjSheetInput').addEventListener('keydown',e=>{ if(e.key==='Enter')saveSjSales(); if(e.key==='Escape')closeSjSheet(); });
@@ -988,13 +1004,13 @@ async function saveShopSales(){
   const dinner=parseInt(document.getElementById('shopDinnerInput').value)||0;
   if(lunch>0||dinner>0)shopSales[k]={lunch,dinner}; else delete shopSales[k];
   closeShopSheet(); renderShopCalendar(); updateHome();
-  const rows=Object.entries(shopSales).map(([k,v])=>[k,v.lunch||0,v.dinner||0]);
+  const rows=Object.entries(shopSales).map(([k,v])=>["'"+k,v.lunch||0,v.dinner||0]);
   try{ await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveShopSales',sales:rows})}); showSync('✓ 売上を保存しました'); }
   catch(e){ showSync('保存に失敗しました',true); }
 }
 function clearShopSales(){ const {y,m,d}=shopEditDay; delete shopSales[shopKey(y,m,d)]; closeShopSheet(); renderShopCalendar(); updateHome(); saveShopSalesAll(); }
 async function saveShopSalesAll(){
-  const rows=Object.entries(shopSales).map(([k,v])=>[k,v.lunch||0,v.dinner||0]);
+  const rows=Object.entries(shopSales).map(([k,v])=>["'"+k,v.lunch||0,v.dinner||0]);
   try{ await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveShopSales',sales:rows})}); }catch(e){}
 }
 
@@ -1178,7 +1194,7 @@ async function saveShopSettings(){
     variable:parseInt(document.getElementById('inputVariable').value)||0
   };
   renderShopSummary();
-  const rows=Object.entries(shopSettings).map(([k,v])=>[k,v.goal||0,v.fixed||0,v.variable||0]);
+  const rows=Object.entries(shopSettings).map(([k,v])=>["'"+k,v.goal||0,v.fixed||0,v.variable||0]);
   try{
     const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveShopSettings',settings:rows})});
     showSync('✓ 設定を保存しました');
