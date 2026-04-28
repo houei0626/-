@@ -949,7 +949,10 @@ function renderShopCalendar(){
     if(total>0){
       const ssalesDiv=document.createElement('div');
       ssalesDiv.className='shop-sales-text';
-      if(lunch>0) ssalesDiv.innerHTML=(lunch>0?'L¥'+Math.round(lunch/1000)+'k':'')+'<br>'+(dinner>0?'D¥'+Math.round(dinner/1000)+'k':'');
+      const lunchStr=lunch>0?'L¥'+Math.round(lunch/1000)+'k':'';
+      const dinnerStr=dinner>0?'D¥'+Math.round(dinner/1000)+'k':'';
+      if(lunchStr&&dinnerStr) ssalesDiv.innerHTML=lunchStr+'<br>'+dinnerStr;
+      else ssalesDiv.innerHTML=lunchStr+dinnerStr;
       cell.appendChild(ssalesDiv);
     }
     body.appendChild(cell);
@@ -970,7 +973,7 @@ function renderShopSummary(){
   const expense=settings.fixed+settings.variable;
   const breakeven=expense;
   const remaining=Math.max(0,breakeven-monthTotal);
-  const achievement=settings.goal>0?Math.min(100,Math.round(monthTotal/settings.goal*100)):0;
+  const achievement=settings.goal>0?Math.round(monthTotal/settings.goal*100):0;
 
   document.getElementById('shopSummaryMonthLabel').textContent=`${shopYear}年${shopMonth+1}月`;
   document.getElementById('shopSummaryAmount').textContent='¥'+monthTotal.toLocaleString();
@@ -986,7 +989,7 @@ function renderShopSummary(){
   const circumference=201;
   const offset=circumference-(pct/100)*circumference;
   document.getElementById('donutProgress').style.strokeDashoffset=offset;
-  document.getElementById('donutProgress').style.stroke=achievement>=100?'#ffd700':achievement>=70?'#7ed9a8':'#ff8a80';
+  document.getElementById('donutProgress').style.stroke=achievement>=100?'#c49a3c':achievement>=70?'#7ed9a8':'#ff8a80';
   document.getElementById('donutText').textContent=settings.goal>0?achievement+'%':'-%';
 
   const msg = remaining>0 ? `あと ¥${remaining.toLocaleString()} で損益分岐点` : monthTotal>0 ? '🎉 損益分岐点を超えました！' : '目標と費用を設定してください';
