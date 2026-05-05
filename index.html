@@ -194,8 +194,9 @@ cursor: pointer; font-size: 0.95rem; color: #6b6456; display: flex; align-items:
 
 .cal-body { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 0 10px 12px; }
 .cal-cell {
-aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column;
+height: 48px; border-radius: 8px; display: flex; flex-direction: column;
 align-items: center; justify-content: center; cursor: pointer; transition: background 0.14s; padding: 1px;
+overflow: hidden;
 }
 .cal-cell:active { background: #f2f0eb; }
 .cal-cell.empty { pointer-events: none; }
@@ -220,9 +221,10 @@ display: flex; align-items: center; justify-content: space-between;
 
 /* ── 店舗売上カレンダー ── */
 .shop-cal-cell {
-aspect-ratio: auto; min-height: 54px; border-radius: 8px;
+height: 54px; border-radius: 8px;
 display: flex; flex-direction: column; align-items: center; justify-content: center;
 cursor: pointer; transition: background 0.14s; padding: 2px;
+overflow: hidden;
 }
 .shop-cal-cell.has-sales { background: #eef4fa; }
 .shop-cal-cell.has-sales .cal-date { color: #1a4a6e; }
@@ -476,7 +478,7 @@ color: #1c1810; text-align: center; margin-bottom: 12px; transition: border-colo
       <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
       <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow">土</div>
     </div>
-    <div class="cal-body" id="shopCalBody" style="gap:2px;padding:0 8px 12px;"></div>
+    <div class="cal-body" id="shopCalBody" style="gap:3px;padding:0 8px 12px;"></div>
     <div class="month-footer">
       <div>
         <div style="font-size:0.65rem;color:#a09888;margin-bottom:2px;">ランチ / ディナー / 合計</div>
