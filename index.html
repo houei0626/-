@@ -677,6 +677,7 @@ let stock=[...DEFAULT_STOCK];
 let sjSales={};   // せんじがら売上 { 'YYYY-MM-DD': amount }
 let shopSales={}; // 店舗売上 { 'YYYY-MM-DD': { lunch, dinner } }
 let shopSettings={}; // { 'YYYY-MM': { goal, fixed, variable } }
+let stockHistory={}; // 在庫履歴（共有） { 'YYYY-MM-DD': { items:[...], auto } }
 
 let sjYear=new Date().getFullYear(), sjMonth=new Date().getMonth();
 let shopYear=new Date().getFullYear(), shopMonth=new Date().getMonth();
@@ -751,6 +752,18 @@ async function loadAll(){
           const rawKey=String(r[0]);
           const mKey=rawKey.substring(0,7);
           if(mKey.length===7) shopSettings[mKey]={goal:Number(r[1])||0,fixed:Number(r[2])||0,variable:Number(r[3])||0};
+        }
+      });
+    }
+    // 在庫履歴（共有）
+    stockHistory={};
+    if(data.stock_history&&data.stock_history.length>0){
+      data.stock_history.forEach(r=>{
+        if(r[0]){
+          const k=normalizeKey(r[0]);
+          let items=[];
+          try{ items=JSON.parse(r[2]||'[]'); }catch(e){ items=[]; }
+          stockHistory[k]={items, auto:String(r[1])==='auto'};
         }
       });
     }
@@ -1104,8 +1117,8 @@ function renderYearlyChart(){
 
 // ── 在庫日次履歴（1日1回・日終わりの在庫スナップショット） ──
 const HISTORY_KEY='yukiya_stock_history_daily';
-function loadHistory(){ try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||{};}catch{return{};} }
-function saveHistoryLocal(h){ localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); }
+function loadHistory(){ return stockHistory; }
+function saveHistoryLocal(h){ stockHistory=h; const rows=Object.entries(h).map(([k,v])=>[k, v.auto?'auto':'manual', JSON.stringify(v.items||[])]); fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveHistory',history:rows})}).catch(()=>{}); }
 
 function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
@@ -1183,9 +1196,10 @@ function renderHistory(){
 }
 
 function clearHistory(){
-  if(confirm('在庫履歴をすべて削除しますか？')){
-    localStorage.removeItem(HISTORY_KEY);
+  if(confirm('在庫履歴をすべて削除しますか？（全員の共有履歴が消えます）')){
+    stockHistory={};
     renderHistory();
+    fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'clearHistory'})}).then(()=>showSync('✓ 履歴を削除しました')).catch(()=>showSync('削除に失敗しました',true));
   }
 }
 
